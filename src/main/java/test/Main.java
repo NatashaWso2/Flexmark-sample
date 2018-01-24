@@ -1,5 +1,6 @@
 package test;
 
+import com.vladsch.flexmark.ast.Document;
 import com.vladsch.flexmark.ast.Node;
 import com.vladsch.flexmark.ext.attributes.AttributesExtension;
 import com.vladsch.flexmark.ext.jekyll.tag.JekyllTag;
@@ -9,8 +10,6 @@ import com.vladsch.flexmark.ext.yaml.front.matter.YamlFrontMatterExtension;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.options.MutableDataSet;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,6 +20,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class Main {
@@ -49,8 +50,8 @@ public class Main {
             Node document = parser.parse(markdown);
 
             // see if markdown document has includes
-            if (document instanceof com.vladsch.flexmark.ast.Document) {
-                com.vladsch.flexmark.ast.Document doc = (com.vladsch.flexmark.ast.Document) document;
+            if (document instanceof Document) {
+                Document doc = (Document) document;
                 if (doc.contains(JekyllTagExtension.TAG_LIST)) {
                     List<JekyllTag> tagList = JekyllTagExtension.TAG_LIST.getFrom(doc);
                     Map<String, String> includeHtmlMap = new HashMap<>();
@@ -90,8 +91,9 @@ public class Main {
             // Get the yaml front matter properties from markdown
             AbstractYamlFrontMatterVisitor visitor = new AbstractYamlFrontMatterVisitor();
             visitor.visit(document);
-
             Map<String, List<String>> frontMatterList = visitor.getData();
+
+            // Decide the layout from the front matter declared
             String layoutHTML;
             if (frontMatterList.get("layout") != null) {
                 String layoutTemplate = frontMatterList.get("layout").get(0);
@@ -102,27 +104,24 @@ public class Main {
 
             // Generate html content from markdown
             String generatedHtmlFromMarkdown = renderer.render(document);
+            layoutHTML = generateHtmlFullDocument(layoutHTML, frontMatterList, generatedHtmlFromMarkdown);
 
-            layoutHTML = replaceContent(layoutHTML, "{{content}}", generatedHtmlFromMarkdown);
-            if (frontMatterList.get("title") != null) {
-                layoutHTML = replaceContent(layoutHTML, "{{title}}", frontMatterList.get("title").get(0));
-            }
-            Document layoutHtmlDoc = Jsoup.parse(layoutHTML);
+
+            // Get file name for the generated html
             String htmlFileName = file.getName().replace(".md", "");
-            writeHtmlToFile(htmlFileName, layoutHtmlDoc.outerHtml().getBytes());
+            writeHtmlToFile(htmlFileName, layoutHTML);
         }
 
     }
 
-    public static void writeHtmlToFile(String fileName, byte[] htmlContent) throws IOException {
+    public static void writeHtmlToFile(String fileName, String htmlContent) throws IOException {
         String filePath = generated_file_directory + fileName + ".html";
-        Files.write(Paths.get(filePath), htmlContent);
+        Files.write(Paths.get(filePath), htmlContent.getBytes());
     }
 
     public static String getLayoutContent(String layoutTemplateFileName) throws IOException {
-        File input = new File(layout_template_directory + layoutTemplateFileName + ".html");
-        Document layoutFileDoc = Jsoup.parse(input, null);
-        return layoutFileDoc.html();
+        return Files.lines(Paths.get(layout_template_directory + layoutTemplateFileName + ".html")).
+                collect(Collectors.joining("\n"));
     }
 
     public static String readMarkdownFile(String name) throws IOException {
@@ -131,9 +130,7 @@ public class Main {
         return markdownContent;
     }
 
-    public static String replaceContent(String
-
-                                                htmlContent, String target, String replacement) {
+    public static String replaceContent(String htmlContent, String target, String replacement) {
         return htmlContent.replace(target, replacement);
     }
 
@@ -154,5 +151,25 @@ public class Main {
             included.put(file.getName(), content);
         }
         return included;
+    }
+
+    public static String generateHtmlFullDocument(String layoutContent, Map<String, List<String>> frontMatterList, String generatedHtmlFromMarkdown) {
+        Pattern pattern = Pattern.compile("\\{\\{(.*?)\\}\\}");
+        Matcher matchPattern = pattern.matcher(layoutContent);
+        while (matchPattern.find()) {
+            String matchedWord = matchPattern.group(0);
+            // Remove curly braces from word
+            matchedWord = matchedWord.replaceAll("\\{", "");
+            matchedWord = matchedWord.replaceAll("\\}", "");
+
+            if (matchedWord.equals("content")) {
+                layoutContent = layoutContent.replace(matchPattern.group(0), generatedHtmlFromMarkdown);
+            } else {
+                String replacement = frontMatterList.get(matchedWord).get(0);
+                layoutContent = layoutContent.replace(matchPattern.group(0), replacement);
+            }
+        }
+
+        return layoutContent;
     }
 }
