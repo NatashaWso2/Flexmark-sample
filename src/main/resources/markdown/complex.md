@@ -2,6 +2,7 @@
 layout: index
 title: This is a title
 ---
+{% include header.md %}
 
 ### hello this is a complex example
 paragraph text  lazy continuation
@@ -11,3 +12,4 @@ function main (string[] args) {
     println("Hello, World!");
 }
 ```
+{% include footer.html %}
