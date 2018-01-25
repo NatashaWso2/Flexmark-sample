@@ -7,7 +7,7 @@
 </head>
 <body>
 <div class="mainDiv">
-    <h3 id="title">This is a title</h3>
+    <h3 id="title">Hello World</h3>
     <div class="sidebar">
         <h1>Table of Contents</h1>
         <ol>
@@ -21,16 +21,21 @@
 
     </div>
     <div class="mainContent">
-        <h3>hello this is a complex example</h3>
-        <p>paragraph text lazy continuation</p>
+        <h3>Hello World</h3>
+        <p>Let's print &quot;Hello, World!&quot; using Ballerina. Here's the full source code.</p>
         <div name="blockDiv">
-            <div class="commentDiv"><span name="comment-block">
-&lt;br&gt;
-&lt;br&gt;
+            <div class="commentDiv"><span name="comment-block">Simple hello world program&lt;br&gt;Prints hello world to stdout&lt;br&gt;
 </span></div>
             <div class="codeDiv"><pre><code class="language-ballerina">function main (string[] args) {
     println(&quot;Hello, World!&quot;);
 }</code></pre>
+            </div>
+        </div>
+        <div name="blockDiv">
+            <div class="commentDiv"><span name="comment-block">To run the program, put the code in &quot;hello-world.bal&quot; and use &quot;ballerina run&quot; command.&lt;br&gt;
+</span></div>
+            <div class="codeDiv"><pre><code class="language-bash">$ ballerina run hello-world.bal
+Hello, World!</code></pre>
             </div>
         </div>
 

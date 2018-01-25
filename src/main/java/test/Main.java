@@ -30,88 +30,92 @@ public class Main {
                     CustomExtension.create(), AttributesExtension.create(), YamlFrontMatterExtension.create(),
                     JekyllTagExtension.create()
             ));
+    // .set(HtmlRenderer.UNESCAPE_HTML_ENTITIES, false);
     static String userDir = System.getProperty("user.dir");
     static String generated_file_directory = userDir + "/src/main/resources/generated/";
     static String layout_template_directory = userDir + "/src/main/resources/layouts/";
     static String markdown_file_directory = userDir + "/src/main/resources/markdown/";
     static String included_file_directory = userDir + "/src/main/resources/included/";
     static String default_template = "default";
+    static Parser parser = Parser.builder(OPTIONS).build();
+    static HtmlRenderer renderer = HtmlRenderer.builder(OPTIONS).build();
 
-    public static void main(String[] args) throws IOException {
-        // Build the parser and HTML parser
-        Parser parser = Parser.builder(OPTIONS).build();
-        HtmlRenderer renderer = HtmlRenderer.builder(OPTIONS).build();
-
+    public static void init() throws IOException {
         List<File> fileList = listAllFilesInDirectory(markdown_file_directory);
 
         for (File file : fileList) {
-
             String markdown = readMarkdownFile(file.getName());
-            Node document = parser.parse(markdown);
-
-            // see if markdown document has includes
-            if (document instanceof Document) {
-                Document doc = (Document) document;
-                if (doc.contains(JekyllTagExtension.TAG_LIST)) {
-                    List<JekyllTag> tagList = JekyllTagExtension.TAG_LIST.getFrom(doc);
-                    Map<String, String> includeHtmlMap = new HashMap<>();
-
-                    for (JekyllTag tag : tagList) {
-                        String includeFile = tag.getParameters().toString();
-                        if (tag.getTag().equals("include") && !includeFile.isEmpty() && !includeHtmlMap.containsKey(includeFile)) {
-                            // see if it exists
-                            Map<String, String> included = getIncludedFilesWithContent();
-                            if (included.containsKey(includeFile)) {
-                                // have the file
-                                String text = included.get(includeFile);
-
-                                if (includeFile.endsWith(".md")) {
-                                    Node includeDoc = parser.parse(text);
-                                    String includeHtml = renderer.render(includeDoc);
-                                    includeHtmlMap.put(includeFile, includeHtml);
-
-                                    if (includeDoc instanceof com.vladsch.flexmark.ast.Document) {
-                                        // copy any definition of reference elements from included file to our document
-                                        parser.transferReferences(doc, (com.vladsch.flexmark.ast.Document) includeDoc);
-                                    }
-                                } else {
-                                    includeHtmlMap.put(includeFile, text);
-                                }
-                            }
-                        }
-
-                        if (!includeHtmlMap.isEmpty()) {
-                            doc.set(JekyllTagExtension.INCLUDED_HTML, includeHtmlMap);
-                        }
-                    }
-                }
-            }
-
-
+            Node document = processMarkDownFile(markdown);
             // Get the yaml front matter properties from markdown
             AbstractYamlFrontMatterVisitor visitor = new AbstractYamlFrontMatterVisitor();
             visitor.visit(document);
             Map<String, List<String>> frontMatterList = visitor.getData();
 
             // Decide the layout from the front matter declared
-            String layoutHTML;
+            StringBuilder layoutHTML;
             if (frontMatterList.get("layout") != null) {
                 String layoutTemplate = frontMatterList.get("layout").get(0);
-                layoutHTML = getLayoutContent(layoutTemplate);
+                layoutHTML = new StringBuilder(getLayoutContent(layoutTemplate));
             } else {
-                layoutHTML = getLayoutContent(default_template);
+                layoutHTML = new StringBuilder(getLayoutContent(default_template));
             }
 
             // Generate html content from markdown
             String generatedHtmlFromMarkdown = renderer.render(document);
-            layoutHTML = generateHtmlFullDocument(layoutHTML, frontMatterList, generatedHtmlFromMarkdown);
+
+            // Manipulate the layout html
+            addIncludedFilesInHTML(layoutHTML);
+            generateHtmlFullDocument(layoutHTML, frontMatterList, generatedHtmlFromMarkdown);
 
 
             // Get file name for the generated html
             String htmlFileName = file.getName().replace(".md", "");
-            writeHtmlToFile(htmlFileName, layoutHTML);
+            writeHtmlToFile(htmlFileName, layoutHTML.toString());
         }
 
+    }
+
+    public static Node processMarkDownFile(String markdown) throws IOException {
+        Node document = parser.parse(markdown);
+
+        // see if markdown document has includes
+        if (document instanceof Document) {
+            Document doc = (Document) document;
+            if (doc.contains(JekyllTagExtension.TAG_LIST)) {
+                List<JekyllTag> tagList = JekyllTagExtension.TAG_LIST.getFrom(doc);
+                Map<String, String> includeHtmlMap = new HashMap<>();
+
+                for (JekyllTag tag : tagList) {
+                    String includeFile = tag.getParameters().toString();
+                    if (tag.getTag().equals("include") && !includeFile.isEmpty() && !includeHtmlMap.containsKey(includeFile)) {
+                        // see if it exists
+                        Map<String, String> included = getIncludedFilesWithContent();
+                        if (included.containsKey(includeFile)) {
+                            // have the file
+                            String text = included.get(includeFile);
+
+                            if (includeFile.endsWith(".md")) {
+                                Node includeDoc = parser.parse(text);
+                                String includeHtml = renderer.render(includeDoc);
+                                includeHtmlMap.put(includeFile, includeHtml);
+
+                                if (includeDoc instanceof com.vladsch.flexmark.ast.Document) {
+                                    // copy any definition of reference elements from included file to our document
+                                    parser.transferReferences(doc, (com.vladsch.flexmark.ast.Document) includeDoc);
+                                }
+                            } else {
+                                includeHtmlMap.put(includeFile, text);
+                            }
+                        }
+                    }
+
+                    if (!includeHtmlMap.isEmpty()) {
+                        doc.set(JekyllTagExtension.INCLUDED_HTML, includeHtmlMap);
+                    }
+                }
+            }
+        }
+        return document;
     }
 
     public static void writeHtmlToFile(String fileName, String htmlContent) throws IOException {
@@ -128,10 +132,6 @@ public class Main {
         String markdownContent = Files.lines(Paths.get(markdown_file_directory + name))
                 .collect(Collectors.joining("\n"));
         return markdownContent;
-    }
-
-    public static String replaceContent(String htmlContent, String target, String replacement) {
-        return htmlContent.replace(target, replacement);
     }
 
     public static List<File> listAllFilesInDirectory(String fileDir) throws IOException {
@@ -153,23 +153,44 @@ public class Main {
         return included;
     }
 
-    public static String generateHtmlFullDocument(String layoutContent, Map<String, List<String>> frontMatterList, String generatedHtmlFromMarkdown) {
-        Pattern pattern = Pattern.compile("\\{\\{(.*?)\\}\\}");
+    public static void generateHtmlFullDocument(StringBuilder layoutContent, Map<String, List<String>> frontMatterList, String generatedHtmlFromMarkdown) {
+        Pattern pattern = Pattern.compile("\\{\\{(\\w*)\\}\\}");
         Matcher matchPattern = pattern.matcher(layoutContent);
         while (matchPattern.find()) {
             String matchedWord = matchPattern.group(0);
+
             // Remove curly braces from word
             matchedWord = matchedWord.replaceAll("\\{", "");
             matchedWord = matchedWord.replaceAll("\\}", "");
 
             if (matchedWord.equals("content")) {
-                layoutContent = layoutContent.replace(matchPattern.group(0), generatedHtmlFromMarkdown);
+                layoutContent = layoutContent.replace(matchPattern.start(), matchPattern.end(), generatedHtmlFromMarkdown);
             } else {
                 String replacement = frontMatterList.get(matchedWord).get(0);
-                layoutContent = layoutContent.replace(matchPattern.group(0), replacement);
+                layoutContent = layoutContent.replace(matchPattern.start(), matchPattern.end(), replacement);
             }
         }
+    }
 
-        return layoutContent;
+    public static void addIncludedFilesInHTML(StringBuilder layoutContent) throws IOException {
+        Pattern pattern = Pattern.compile("\\{[%](.*?)\\}");
+        Matcher matchPattern = pattern.matcher(layoutContent);
+        while (matchPattern.find()) {
+            String matchedWord = matchPattern.group(0);
+
+            // Remove curly braces from word
+            matchedWord = matchedWord.replaceAll("\\{% include", "").trim();
+            matchedWord = matchedWord.replaceAll("%\\}", "").trim();
+
+            // Generate HTML content from the matched file name
+            String matchedFileContent = readMarkdownFile(matchedWord);
+            String generatedHtml = renderer.render(processMarkDownFile(matchedFileContent));
+            layoutContent = layoutContent.replace(matchPattern.start(), matchPattern.end(), generatedHtml);
+
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        init();
     }
 }

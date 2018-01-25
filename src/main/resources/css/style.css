@@ -1,8 +1,36 @@
-#title{
-    color: red;
+ol {
+    counter-reset: item
 }
 
-.language-ballerina{
-    font-style: italic;
-    color: green;
+li {
+    display: block
+}
+
+li:before {
+    content: counters(item, ".") " ";
+    counter-increment: item
+}
+
+.sidebar {
+    float: left;
+    width: 20%;
+    border-right-style: outset;
+    height: 100%;
+}
+
+.mainContent {
+    float: right;
+    width: 77%;
+}
+
+.commentDiv {
+    float: left;
+    width: 45%;
+    padding-top: 20px;
+    font-size: 1.2em;
+}
+
+.codeDiv {
+    float: left;
+    width: 52%;
 }
