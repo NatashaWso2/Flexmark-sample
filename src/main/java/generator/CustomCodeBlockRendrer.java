@@ -1,4 +1,4 @@
-package test;
+package generator;
 
 import com.vladsch.flexmark.ast.FencedCodeBlock;
 import com.vladsch.flexmark.html.CustomNodeRenderer;
@@ -16,11 +16,19 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.IntStream;
 
+/**
+ * Custom block class which renders the code block generated
+ */
 class CustomCodeBlockRendrer implements NodeRenderer {
 
     CustomCodeBlockRendrer(DataHolder dataHolder) {
     }
 
+    /**
+     * Get node rendering handlers for different kinds of nodes
+     *
+     * @return cutom node rendering handlers
+     */
     @Override
     public Set<NodeRenderingHandler<?>> getNodeRenderingHandlers() {
         HashSet<NodeRenderingHandler<?>> set = new HashSet<NodeRenderingHandler<?>>();
@@ -34,6 +42,13 @@ class CustomCodeBlockRendrer implements NodeRenderer {
         return set;
     }
 
+    /**
+     * Renders the code block after customizing it
+     *
+     * @param fencedCodeBlock
+     * @param nodeRendererContext
+     * @param htmlWriter
+     */
     public void render(FencedCodeBlock fencedCodeBlock, NodeRendererContext nodeRendererContext, HtmlWriter htmlWriter) {
         htmlWriter.line();
         String comment_format;
@@ -82,7 +97,7 @@ class CustomCodeBlockRendrer implements NodeRenderer {
                     nbr -> comments_vector.add("\n")
             );
         }
-        String comments = String.join("<br>", comments_vector);
+        String comments = String.join("\n", comments_vector);
         String code = String.join("\n", code_vector);
 
         htmlWriter.attr("name", "blockDiv");
@@ -113,6 +128,9 @@ class CustomCodeBlockRendrer implements NodeRenderer {
         htmlWriter.line();
     }
 
+    /**
+     * NodeRenderFactory implementation to call the custom node render
+     */
     public static class Factory implements NodeRendererFactory {
         @Override
         public NodeRenderer create(final DataHolder options) {

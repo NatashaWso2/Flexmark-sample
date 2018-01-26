@@ -1,4 +1,4 @@
-package test;
+package generator;
 
 import com.vladsch.flexmark.ast.Document;
 import com.vladsch.flexmark.ast.Node;
@@ -24,24 +24,33 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class Main {
-    static final MutableDataSet OPTIONS = new MutableDataSet()
+/**
+ * Generates the HTML page by parsing the markdown file
+ */
+public class HtmlGenerator {
+    final MutableDataSet OPTIONS = new MutableDataSet()
             .set(Parser.EXTENSIONS, Arrays.asList(
                     CustomExtension.create(), AttributesExtension.create(), YamlFrontMatterExtension.create(),
                     JekyllTagExtension.create()
             ));
-    // .set(HtmlRenderer.UNESCAPE_HTML_ENTITIES, false);
-    static String userDir = System.getProperty("user.dir");
-    static String generated_file_directory = userDir + "/src/main/resources/generated/";
-    static String layout_template_directory = userDir + "/src/main/resources/layouts/";
-    static String markdown_file_directory = userDir + "/src/main/resources/markdown/";
-    static String included_file_directory = userDir + "/src/main/resources/included/";
-    static String default_template = "default";
-    static Parser parser = Parser.builder(OPTIONS).build();
-    static HtmlRenderer renderer = HtmlRenderer.builder(OPTIONS).build();
+    final String userDir = System.getProperty("user.dir");
+    final String generated_file_directory = userDir + "/src/main/resources/generated/";
+    final String layout_template_directory = userDir + "/src/main/resources/layouts/";
+    final String markdown_file_directory = userDir + "/src/main/resources/markdown/";
+    final String included_file_directory = userDir + "/src/main/resources/included/";
+    final String default_template = "default";
+    final Parser parser = Parser.builder(OPTIONS).build();
+    final HtmlRenderer renderer = HtmlRenderer.builder(OPTIONS).build();
+    Map<String, String> included;
 
-    public static void init() throws IOException {
+    /**
+     * Inits the Parser, HTMLRendrer and iterates each file of the examples and generates the HTML page
+     *
+     * @throws IOException
+     */
+    public void init() throws IOException {
         List<File> fileList = listAllFilesInDirectory(markdown_file_directory);
+        included = getIncludedFilesWithContent();
 
         for (File file : fileList) {
             String markdown = readMarkdownFile(file.getName());
@@ -75,7 +84,14 @@ public class Main {
 
     }
 
-    public static Node processMarkDownFile(String markdown) throws IOException {
+    /**
+     * Processes the markdown content
+     *
+     * @param markdown content in the markdown file
+     * @return processed node
+     * @throws IOException
+     */
+    public Node processMarkDownFile(String markdown) throws IOException {
         Node document = parser.parse(markdown);
 
         // see if markdown document has includes
@@ -89,7 +105,6 @@ public class Main {
                     String includeFile = tag.getParameters().toString();
                     if (tag.getTag().equals("include") && !includeFile.isEmpty() && !includeHtmlMap.containsKey(includeFile)) {
                         // see if it exists
-                        Map<String, String> included = getIncludedFilesWithContent();
                         if (included.containsKey(includeFile)) {
                             // have the file
                             String text = included.get(includeFile);
@@ -118,23 +133,51 @@ public class Main {
         return document;
     }
 
-    public static void writeHtmlToFile(String fileName, String htmlContent) throws IOException {
+    /**
+     * Write the HTMl content to file
+     *
+     * @param fileName    file name
+     * @param htmlContent content to be written
+     * @throws IOException
+     */
+    public void writeHtmlToFile(String fileName, String htmlContent) throws IOException {
         String filePath = generated_file_directory + fileName + ".html";
         Files.write(Paths.get(filePath), htmlContent.getBytes());
     }
 
-    public static String getLayoutContent(String layoutTemplateFileName) throws IOException {
+    /**
+     * Get HTML layout content from layout file
+     *
+     * @param layoutTemplateFileName
+     * @return
+     * @throws IOException
+     */
+    public String getLayoutContent(String layoutTemplateFileName) throws IOException {
         return Files.lines(Paths.get(layout_template_directory + layoutTemplateFileName + ".html")).
                 collect(Collectors.joining("\n"));
     }
 
-    public static String readMarkdownFile(String name) throws IOException {
+    /**
+     * Read the markdown files and get the content
+     *
+     * @param name markdown file name
+     * @return markdown content of the file
+     * @throws IOException
+     */
+    public String readMarkdownFile(String name) throws IOException {
         String markdownContent = Files.lines(Paths.get(markdown_file_directory + name))
                 .collect(Collectors.joining("\n"));
         return markdownContent;
     }
 
-    public static List<File> listAllFilesInDirectory(String fileDir) throws IOException {
+    /**
+     * List all files in the directory
+     *
+     * @param fileDir file directory
+     * @return list of files in that directory
+     * @throws IOException
+     */
+    public List<File> listAllFilesInDirectory(String fileDir) throws IOException {
         List<File> filesInFolder = Files.walk(Paths.get(fileDir))
                 .filter(Files::isRegularFile)
                 .map(Path::toFile)
@@ -142,7 +185,13 @@ public class Main {
         return filesInFolder;
     }
 
-    public static Map<String, String> getIncludedFilesWithContent() throws IOException {
+    /**
+     * Reads the included files i.e. commonly shared files and read their contents
+     *
+     * @return list of ncluded files i.e. commonly shared files and their content
+     * @throws IOException
+     */
+    public Map<String, String> getIncludedFilesWithContent() throws IOException {
         List<File> fileList = listAllFilesInDirectory(included_file_directory);
         Map<String, String> included = new HashMap<>();
         for (File file : fileList) {
@@ -153,7 +202,14 @@ public class Main {
         return included;
     }
 
-    public static void generateHtmlFullDocument(StringBuilder layoutContent, Map<String, List<String>> frontMatterList, String generatedHtmlFromMarkdown) {
+    /**
+     * Generate the full HTML content by replacing the content passed down from the markdown
+     *
+     * @param layoutContent             content of the layout file
+     * @param frontMatterList           list of yaml front matter defined in the markdown file
+     * @param generatedHtmlFromMarkdown partial HTML file generated from markdown content
+     */
+    public void generateHtmlFullDocument(StringBuilder layoutContent, Map<String, List<String>> frontMatterList, String generatedHtmlFromMarkdown) {
         Pattern pattern = Pattern.compile("\\{\\{(\\w*)\\}\\}");
         Matcher matchPattern = pattern.matcher(layoutContent);
         while (matchPattern.find()) {
@@ -172,7 +228,13 @@ public class Main {
         }
     }
 
-    public static void addIncludedFilesInHTML(StringBuilder layoutContent) throws IOException {
+    /**
+     * Adds the included files in the layout HTMl as HTML content
+     *
+     * @param layoutContent content of the layout
+     * @throws IOException
+     */
+    public void addIncludedFilesInHTML(StringBuilder layoutContent) throws IOException {
         Pattern pattern = Pattern.compile("\\{[%](.*?)\\}");
         Matcher matchPattern = pattern.matcher(layoutContent);
         while (matchPattern.find()) {
@@ -188,9 +250,5 @@ public class Main {
             layoutContent = layoutContent.replace(matchPattern.start(), matchPattern.end(), generatedHtml);
 
         }
-    }
-
-    public static void main(String[] args) throws IOException {
-        init();
     }
 }

@@ -11,7 +11,6 @@ Let's print "Hello, World!" using Ballerina. Here's the full source code.
 ```ballerina
 // Simple hello world program
 function main (string[] args) {
-    //Prints hello world to stdout
     println("Hello, World!");
 }
 ```
