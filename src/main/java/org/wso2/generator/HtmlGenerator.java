@@ -1,10 +1,12 @@
-package generator;
+package org.wso2.generator;
 
 import com.vladsch.flexmark.ast.Document;
 import com.vladsch.flexmark.ast.Node;
 import com.vladsch.flexmark.ext.attributes.AttributesExtension;
 import com.vladsch.flexmark.ext.jekyll.tag.JekyllTag;
 import com.vladsch.flexmark.ext.jekyll.tag.JekyllTagExtension;
+import com.vladsch.flexmark.ext.tables.TablesExtension;
+import com.vladsch.flexmark.ext.xwiki.macros.MacroExtension;
 import com.vladsch.flexmark.ext.yaml.front.matter.AbstractYamlFrontMatterVisitor;
 import com.vladsch.flexmark.ext.yaml.front.matter.YamlFrontMatterExtension;
 import com.vladsch.flexmark.html.HtmlRenderer;
@@ -30,9 +32,12 @@ import java.util.stream.Collectors;
 public class HtmlGenerator {
     final MutableDataSet OPTIONS = new MutableDataSet()
             .set(Parser.EXTENSIONS, Arrays.asList(
-                    CustomExtension.create(), AttributesExtension.create(), YamlFrontMatterExtension.create(),
-                    JekyllTagExtension.create()
-            ));
+                    AttributesExtension.create(), YamlFrontMatterExtension.create(),
+                    JekyllTagExtension.create(), MacroExtension.create(), CustomExtension.create(),
+                    TablesExtension.create()
+            ))
+            .set(MacroExtension.ENABLE_RENDERING, true)
+            .set(TablesExtension.CLASS_NAME, "table-style");
     final String userDir = System.getProperty("user.dir");
     final String generated_file_directory = userDir + "/src/main/resources/generated/";
     final String layout_template_directory = userDir + "/src/main/resources/layouts/";

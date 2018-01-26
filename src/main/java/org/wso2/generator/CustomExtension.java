@@ -1,4 +1,4 @@
-package generator;
+package org.wso2.generator;
 
 import com.vladsch.flexmark.Extension;
 import com.vladsch.flexmark.html.HtmlRenderer;
