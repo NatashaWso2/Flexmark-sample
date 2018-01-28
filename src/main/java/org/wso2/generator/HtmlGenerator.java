@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  * Generates the HTML page by parsing the markdown file
  */
 public class HtmlGenerator {
-    final MutableDataSet OPTIONS = new MutableDataSet()
+    static final MutableDataSet OPTIONS = new MutableDataSet()
             .set(Parser.EXTENSIONS, Arrays.asList(
                     AttributesExtension.create(), YamlFrontMatterExtension.create(),
                     JekyllTagExtension.create(), MacroExtension.create(), CustomExtension.create(),
@@ -38,22 +38,22 @@ public class HtmlGenerator {
             ))
             .set(MacroExtension.ENABLE_RENDERING, true)
             .set(TablesExtension.CLASS_NAME, "table-style");
-    final String userDir = System.getProperty("user.dir");
-    final String generated_file_directory = userDir + "/src/main/resources/generated/";
-    final String layout_template_directory = userDir + "/src/main/resources/layouts/";
-    final String markdown_file_directory = userDir + "/src/main/resources/markdown/";
-    final String included_file_directory = userDir + "/src/main/resources/included/";
-    final String default_template = "default";
-    final Parser parser = Parser.builder(OPTIONS).build();
-    final HtmlRenderer renderer = HtmlRenderer.builder(OPTIONS).build();
-    Map<String, String> included;
+    static final String userDir = System.getProperty("user.dir");
+    static final String generated_file_directory = userDir + "/src/main/resources/generated/";
+    static final String layout_template_directory = userDir + "/src/main/resources/layouts/";
+    static final String markdown_file_directory = userDir + "/src/main/resources/markdown/";
+    static final String included_file_directory = userDir + "/src/main/resources/included/";
+    static final String default_template = "default";
+    static final Parser parser = Parser.builder(OPTIONS).build();
+    static final HtmlRenderer renderer = HtmlRenderer.builder(OPTIONS).build();
+    static Map<String, String> included;
 
     /**
      * Inits the Parser, HTMLRendrer and iterates each file of the examples and generates the HTML page
      *
      * @throws IOException
      */
-    public void init() throws IOException {
+    public static void init() throws IOException {
         List<File> fileList = listAllFilesInDirectory(markdown_file_directory);
         included = getIncludedFilesWithContent();
 
@@ -96,7 +96,7 @@ public class HtmlGenerator {
      * @return processed node
      * @throws IOException
      */
-    public Node processMarkDownFile(String markdown) throws IOException {
+    public static Node processMarkDownFile(String markdown) throws IOException {
         Node document = parser.parse(markdown);
 
         // see if markdown document has includes
@@ -145,7 +145,7 @@ public class HtmlGenerator {
      * @param htmlContent content to be written
      * @throws IOException
      */
-    public void writeHtmlToFile(String fileName, String htmlContent) throws IOException {
+    public static void writeHtmlToFile(String fileName, String htmlContent) throws IOException {
         String filePath = generated_file_directory + fileName + ".html";
         Files.write(Paths.get(filePath), htmlContent.getBytes());
     }
@@ -157,7 +157,7 @@ public class HtmlGenerator {
      * @return
      * @throws IOException
      */
-    public String getLayoutContent(String layoutTemplateFileName) throws IOException {
+    public static String getLayoutContent(String layoutTemplateFileName) throws IOException {
         return Files.lines(Paths.get(layout_template_directory + layoutTemplateFileName + ".html")).
                 collect(Collectors.joining("\n"));
     }
@@ -169,7 +169,7 @@ public class HtmlGenerator {
      * @return markdown content of the file
      * @throws IOException
      */
-    public String readMarkdownFile(String name) throws IOException {
+    public static String readMarkdownFile(String name) throws IOException {
         String markdownContent = Files.lines(Paths.get(markdown_file_directory + name))
                 .collect(Collectors.joining("\n"));
         return markdownContent;
@@ -182,7 +182,7 @@ public class HtmlGenerator {
      * @return list of files in that directory
      * @throws IOException
      */
-    public List<File> listAllFilesInDirectory(String fileDir) throws IOException {
+    public static List<File> listAllFilesInDirectory(String fileDir) throws IOException {
         List<File> filesInFolder = Files.walk(Paths.get(fileDir))
                 .filter(Files::isRegularFile)
                 .map(Path::toFile)
@@ -196,7 +196,7 @@ public class HtmlGenerator {
      * @return list of ncluded files i.e. commonly shared files and their content
      * @throws IOException
      */
-    public Map<String, String> getIncludedFilesWithContent() throws IOException {
+    public static Map<String, String> getIncludedFilesWithContent() throws IOException {
         List<File> fileList = listAllFilesInDirectory(included_file_directory);
         Map<String, String> included = new HashMap<>();
         for (File file : fileList) {
@@ -214,7 +214,7 @@ public class HtmlGenerator {
      * @param frontMatterList           list of yaml front matter defined in the markdown file
      * @param generatedHtmlFromMarkdown partial HTML file generated from markdown content
      */
-    public void generateHtmlFullDocument(StringBuilder layoutContent, Map<String, List<String>> frontMatterList, String generatedHtmlFromMarkdown) {
+    public static void generateHtmlFullDocument(StringBuilder layoutContent, Map<String, List<String>> frontMatterList, String generatedHtmlFromMarkdown) {
         Pattern pattern = Pattern.compile("\\{\\{(\\w*)\\}\\}");
         Matcher matchPattern = pattern.matcher(layoutContent);
         while (matchPattern.find()) {
@@ -239,7 +239,7 @@ public class HtmlGenerator {
      * @param layoutContent content of the layout
      * @throws IOException
      */
-    public void addIncludedFilesInHTML(StringBuilder layoutContent) throws IOException {
+    public static void addIncludedFilesInHTML(StringBuilder layoutContent) throws IOException {
         Pattern pattern = Pattern.compile("\\{[%](.*?)\\}");
         Matcher matchPattern = pattern.matcher(layoutContent);
         while (matchPattern.find()) {

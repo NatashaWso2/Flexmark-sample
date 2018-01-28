@@ -98,6 +98,7 @@ class CustomCodeBlockRendrer implements NodeRenderer {
 
     /**
      * Renders images
+     *
      * @param node
      * @param context
      * @param htmlWriter
@@ -115,6 +116,7 @@ class CustomCodeBlockRendrer implements NodeRenderer {
 
     /**
      * Renders a table
+     *
      * @param node
      * @param context
      * @param htmlWriter
@@ -125,6 +127,7 @@ class CustomCodeBlockRendrer implements NodeRenderer {
 
     /**
      * Renders the macro close node
+     *
      * @param node
      * @param context
      * @param htmlWriter
@@ -134,6 +137,7 @@ class CustomCodeBlockRendrer implements NodeRenderer {
 
     /**
      * Renders the macro block
+     *
      * @param node
      * @param context
      * @param htmlWriter
@@ -159,6 +163,7 @@ class CustomCodeBlockRendrer implements NodeRenderer {
 
     /**
      * Renders the macro attribute node
+     *
      * @param node
      * @param context
      * @param htmlWriter
@@ -261,6 +266,7 @@ class CustomCodeBlockRendrer implements NodeRenderer {
 
     /**
      * Renders the macro node
+     *
      * @param node
      * @param nodeRendererContext
      * @param htmlWriter
