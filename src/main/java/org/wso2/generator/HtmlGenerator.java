@@ -47,46 +47,92 @@ public class HtmlGenerator {
     static final Parser parser = Parser.builder(OPTIONS).build();
     static final HtmlRenderer renderer = HtmlRenderer.builder(OPTIONS).build();
     static Map<String, String> included;
+    static Map<String, List<String>> frontMatterList;
 
     /**
-     * Inits the Parser, HTMLRendrer and iterates each file of the examples and generates the HTML page
+     * Generate pages for all markdown files given in the directory
      *
      * @throws IOException
      */
-    public static void init() throws IOException {
+    public static void generatePagesForAllFiles() throws IOException {
         List<File> fileList = listAllFilesInDirectory(markdown_file_directory);
         included = getIncludedFilesWithContent();
 
         for (File file : fileList) {
-            String markdown = readMarkdownFile(file.getName());
-            Node document = processMarkDownFile(markdown);
-            // Get the yaml front matter properties from markdown
-            AbstractYamlFrontMatterVisitor visitor = new AbstractYamlFrontMatterVisitor();
-            visitor.visit(document);
-            Map<String, List<String>> frontMatterList = visitor.getData();
-
-            // Decide the layout from the front matter declared
-            StringBuilder layoutHTML;
-            if (frontMatterList.get("layout") != null) {
-                String layoutTemplate = frontMatterList.get("layout").get(0);
-                layoutHTML = new StringBuilder(getLayoutContent(layoutTemplate));
-            } else {
-                layoutHTML = new StringBuilder(getLayoutContent(default_template));
-            }
-
-            // Generate html content from markdown
-            String generatedHtmlFromMarkdown = renderer.render(document);
-
-            // Manipulate the layout html
-            addIncludedFilesInHTML(layoutHTML);
-            generateHtmlFullDocument(layoutHTML, frontMatterList, generatedHtmlFromMarkdown);
-
-
-            // Get file name for the generated html
-            String htmlFileName = file.getName().replace(".md", "");
-            writeHtmlToFile(htmlFileName, layoutHTML.toString());
+            generatePageForFile(file);
         }
+    }
 
+    /**
+     * Generate HTML page for a file
+     *
+     * @param file
+     * @throws IOException
+     */
+    public static void generatePageForFile(File file) throws IOException {
+        included = getIncludedFilesWithContent();
+        String markdown = readMarkdownFile(file.getName());
+        Node document = processMarkDownFile(markdown);
+
+        populateYamlFrontmatterList(document);
+
+        StringBuilder layoutHTML = selectLayoutTemplate();
+
+        String generatedHtmlFromMarkdown = renderDocument(document);
+
+        addIncludedFilesInHTML(layoutHTML);
+        generateHtmlFullDocument(layoutHTML, frontMatterList, generatedHtmlFromMarkdown);
+
+        String htmlFileName = getNameForGeneratedHtml(file.getName());
+        writeHtmlToFile(htmlFileName, layoutHTML.toString());
+    }
+
+    /**
+     * Get the yaml front matter properties from markdown
+     *
+     * @param document
+     */
+    public static void populateYamlFrontmatterList(Node document) {
+        AbstractYamlFrontMatterVisitor visitor = new AbstractYamlFrontMatterVisitor();
+        visitor.visit(document);
+        frontMatterList = visitor.getData();
+    }
+
+    /**
+     * Decide the layout from the front matter declared
+     *
+     * @return layout content
+     * @throws IOException
+     */
+    public static StringBuilder selectLayoutTemplate() throws IOException {
+        StringBuilder layoutHTML;
+        if (frontMatterList.get("layout") != null) {
+            String layoutTemplate = frontMatterList.get("layout").get(0);
+            layoutHTML = new StringBuilder(getLayoutContent(layoutTemplate));
+        } else {
+            layoutHTML = new StringBuilder(getLayoutContent(default_template));
+        }
+        return layoutHTML;
+    }
+
+    /**
+     * Render HTML document by parsing through the HtmlRender
+     *
+     * @param document
+     * @return HTML document as a string
+     */
+    public static String renderDocument(Node document) {
+        return renderer.render(document);
+    }
+
+    /**
+     * Get file name for generated HTML page
+     *
+     * @param fileName
+     * @return file name for generated HTML page
+     */
+    public static String getNameForGeneratedHtml(String fileName) {
+        return fileName.replace(".md", "");
     }
 
     /**
@@ -255,5 +301,15 @@ public class HtmlGenerator {
             layoutContent = layoutContent.replace(matchPattern.start(), matchPattern.end(), generatedHtml);
 
         }
+    }
+
+    /**
+     * Generate HTML page for file by file path
+     *
+     * @param filePath
+     */
+    public static void generatePageForFile(String filePath) throws IOException {
+        File file = new File(filePath);
+        generatePageForFile(file);
     }
 }

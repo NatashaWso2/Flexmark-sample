@@ -11,9 +11,18 @@ import java.util.List;
 import java.util.Map;
 
 public class GeneratorTest {
-    @Test(description = "Test if the HTMLGenerator class is working.")
-    public void testHTMLGenerator() throws IOException {
-        HtmlGenerator.init();
+    @Test(description = "Test if HTML pages are generated for a directory.")
+    public void testHTMLGeneratorForAllFiles() throws IOException {
+        HtmlGenerator.generatePagesForAllFiles();
+    }
+
+    @Test(description = "Test if HTML pages are generated for a particular file")
+    public void testHTMLGeneratorForAFile() throws IOException {
+        String userDir = System.getProperty("user.dir");
+        String markdown_file_directory = userDir + "/src/main/resources/markdown/";
+
+        // give the file path of the md file here
+        HtmlGenerator.generatePageForFile(markdown_file_directory + "/new.md");
     }
 
     @Test(description = "Test if files included in HTML files are rendered")
